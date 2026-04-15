@@ -169,10 +169,6 @@ public class CsvRecordService {
         if (input == null) {
             return "";
         }
-        String result = input;
-        result = result.replace("\0", "");
-        result = result.replace("..", "");
-        result = result.replaceAll("[\\\\/:*?\"<>|,]", "");
-        return result.trim();
+        return input.replaceAll("[\\\\/:*?\"<>|,]", "").trim();
     }
 }

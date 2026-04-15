@@ -88,7 +88,6 @@ public class QrCodeService {
             return filePath;
         } finally {
             lock.unlock();
-            fileLocks.remove(lockKey);
         }
     }
 
@@ -111,11 +110,7 @@ public class QrCodeService {
         if (input == null) {
             return "";
         }
-        String result = input;
-        result = result.replace("\0", "");
-        result = result.replace("..", "");
-        result = result.replaceAll("[\\\\/:*?\"<>|]", "");
-        return result.trim();
+        return input.replaceAll("[\\\\/:*?\"<>|]", "").trim();
     }
 
     private void createQrCodeImage(String content, String filePath) throws Exception {

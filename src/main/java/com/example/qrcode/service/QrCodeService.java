@@ -88,7 +88,7 @@ public class QrCodeService {
             return filePath;
         } finally {
             lock.unlock();
-            // BUG: 未从 fileLocks 中移除锁对象，导致内存泄漏
+            fileLocks.remove(lockKey);
         }
     }
 
@@ -111,8 +111,11 @@ public class QrCodeService {
         if (input == null) {
             return "";
         }
-        // BUG: 只过滤了部分危险字符，未过滤 .. 和 \0，存在路径遍历漏洞
-        return input.replaceAll("[\\\\/:*?\"<>|]", "").trim();
+        String result = input;
+        result = result.replace("\0", "");
+        result = result.replace("..", "");
+        result = result.replaceAll("[\\\\/:*?\"<>|]", "");
+        return result.trim();
     }
 
     private void createQrCodeImage(String content, String filePath) throws Exception {

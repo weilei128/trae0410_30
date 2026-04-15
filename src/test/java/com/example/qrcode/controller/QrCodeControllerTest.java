@@ -12,19 +12,17 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * QrCodeController单元测试类
- * 测试二维码生成接口的各种场景
- */
 @WebMvcTest(QrCodeController.class)
-class QrCodeControllerTest {
+public class QrCodeControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -42,84 +40,115 @@ class QrCodeControllerTest {
     private static final String TEST_USERNAME = "测试用户";
     private static final String TEST_FILE_PATH = "D:\\picture\\测试单位-测试用户.jpg";
 
+    private QrCodeController.QrCodeRequest validRequest;
+
     @BeforeEach
-    void setUp() throws Exception {
-        // 默认模拟成功生成二维码
-        when(qrCodeService.generateQrCode(anyString(), anyString())).thenReturn(TEST_FILE_PATH);
+    void setUp() {
+        validRequest = new QrCodeController.QrCodeRequest();
+        validRequest.setOrganization(TEST_ORGANIZATION);
+        validRequest.setUsername(TEST_USERNAME);
     }
 
-    /**
-     * 测试场景1: POST请求生成二维码成功
-     * 验证正常参数下二维码生成成功，返回200状态码和正确的响应数据
-     */
     @Test
-    @DisplayName("POST请求生成二维码成功")
-    void generateQrCode_PostRequest_Success() throws Exception {
-        // 构建请求体
-        QrCodeController.QrCodeRequest request = new QrCodeController.QrCodeRequest();
-        request.setOrganization(TEST_ORGANIZATION);
-        request.setUsername(TEST_USERNAME);
+    @DisplayName("POST生成二维码 - 正常请求返回成功响应")
+    void shouldReturnSuccessResponse_whenPostGenerateQrCodeWithValidRequest() throws Exception {
+        when(qrCodeService.generateQrCode(TEST_ORGANIZATION, TEST_USERNAME))
+                .thenReturn(TEST_FILE_PATH);
 
-        // 执行请求并验证结果
         mockMvc.perform(post("/api/qrcode/generate")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.message").value("二维码生成成功"))
                 .andExpect(jsonPath("$.data").value(TEST_FILE_PATH));
     }
 
-    /**
-     * 测试场景2: GET请求生成二维码成功
-     * 验证使用查询参数方式生成二维码成功
-     */
     @Test
-    @DisplayName("GET请求生成二维码成功")
-    void generateQrCode_GetRequest_Success() throws Exception {
-        mockMvc.perform(get("/api/qrcode/generate")
-                .param("organization", TEST_ORGANIZATION)
-                .param("username", TEST_USERNAME))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.message").value("二维码生成成功"))
-                .andExpect(jsonPath("$.data").value(TEST_FILE_PATH));
-    }
-
-    /**
-     * 测试场景3: POST请求参数验证失败-用户单位为空
-     * 验证当organization参数为空时返回400错误
-     */
-    @Test
-    @DisplayName("POST请求用户单位为空返回400错误")
-    void generateQrCode_PostRequest_EmptyOrganization_ReturnsBadRequest() throws Exception {
-        QrCodeController.QrCodeRequest request = new QrCodeController.QrCodeRequest();
-        request.setOrganization("");
-        request.setUsername(TEST_USERNAME);
+    @DisplayName("POST生成二维码 - 参数校验失败时返回400错误")
+    void shouldReturnBadRequest_whenPostGenerateQrCodeWithInvalidParameters() throws Exception {
+        QrCodeController.QrCodeRequest invalidRequest = new QrCodeController.QrCodeRequest();
+        invalidRequest.setOrganization("");
+        invalidRequest.setUsername("");
 
         mockMvc.perform(post("/api/qrcode/generate")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
     }
 
-    /**
-     * 测试场景4: 二维码生成服务异常处理
-     * 验证当服务层抛出异常时返回400错误和错误信息
-     */
     @Test
-    @DisplayName("服务异常时返回400错误")
-    void generateQrCode_ServiceException_ReturnsBadRequest() throws Exception {
-        // 模拟服务抛出异常
-        String errorMessage = "文件名长度超过限制";
-        when(qrCodeService.generateQrCode(anyString(), anyString()))
-                .thenThrow(new Exception(errorMessage));
+    @DisplayName("GET生成二维码 - 正常请求返回成功响应")
+    void shouldReturnSuccessResponse_whenGetGenerateQrCodeWithValidParameters() throws Exception {
+        when(qrCodeService.generateQrCode(TEST_ORGANIZATION, TEST_USERNAME))
+                .thenReturn(TEST_FILE_PATH);
 
         mockMvc.perform(get("/api/qrcode/generate")
-                .param("organization", TEST_ORGANIZATION)
-                .param("username", TEST_USERNAME))
+                        .param("organization", TEST_ORGANIZATION)
+                        .param("username", TEST_USERNAME))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("二维码生成成功"))
+                .andExpect(jsonPath("$.data").value(TEST_FILE_PATH));
+    }
+
+    @Test
+    @DisplayName("GET生成二维码 - 缺少必要参数时返回400错误")
+    void shouldReturnBadRequest_whenGetGenerateQrCodeWithMissingParameters() throws Exception {
+        mockMvc.perform(get("/api/qrcode/generate"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST保存用户记录 - 正常请求返回成功响应")
+    void shouldReturnSuccessResponse_whenPostSaveUserRecordWithValidRequest() throws Exception {
+        mockMvc.perform(post("/api/qrcode/record")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("用户记录保存成功"));
+    }
+
+    @Test
+    @DisplayName("GET保存用户记录 - 正常请求返回成功响应")
+    void shouldReturnSuccessResponse_whenGetSaveUserRecordWithValidParameters() throws Exception {
+        mockMvc.perform(get("/api/qrcode/record")
+                        .param("organization", TEST_ORGANIZATION)
+                        .param("username", TEST_USERNAME))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("用户记录保存成功"));
+    }
+
+    @Test
+    @DisplayName("GET获取统计信息 - 正常返回统计数据")
+    void shouldReturnStatistics_whenGetHourlyStatistics() throws Exception {
+        Map<String, Object> mockStatistics = new HashMap<>();
+        mockStatistics.put("count", 10);
+        mockStatistics.put("timeRange", "过去1小时");
+
+        when(csvRecordService.getHourlyStatistics()).thenReturn(mockStatistics);
+
+        mockMvc.perform(get("/api/qrcode/statistics"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("获取统计信息成功"))
+                .andExpect(jsonPath("$.data.count").value(10))
+                .andExpect(jsonPath("$.data.timeRange").value("过去1小时"));
+    }
+
+    @Test
+    @DisplayName("POST生成二维码 - 服务异常时返回错误响应")
+    void shouldReturnErrorResponse_whenServiceThrowsException() throws Exception {
+        when(qrCodeService.generateQrCode(anyString(), anyString()))
+                .thenThrow(new Exception("用户单位不能为空"));
+
+        mockMvc.perform(post("/api/qrcode/generate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validRequest)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.message").value(errorMessage));
+                .andExpect(jsonPath("$.message").value("用户单位不能为空"));
     }
 }

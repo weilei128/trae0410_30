@@ -1,0 +1,14 @@
+server:
+  port: 8080
+
+qrcode:
+  save:
+    path: D:\picture
+  width: 300
+  height: 300
+
+logging:
+  level:
+    com.example.qrcode: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
